@@ -7,22 +7,18 @@ import {
 } from '../types/index.js';
 import { ANONYMIZE_RULES } from './config.js';
 
-/**
- * Read HMAC key from environment
- */
-const getHmacSecret = (): string => {
-  const secret = process.env.HMAC_SECRET;
-  if (!secret) {
-    throw new Error('HMAC_SECRET environment variable is not set');
-  }
-  return secret;
-};
+const HMAC_SECRET = process.env.HMAC_SECRET;
+if (!HMAC_SECRET) {
+  throw new Error('HMAC_SECRET environment variable is not set');
+}
+
+// Explicit narrowing for TypeScript
+const secret: string = HMAC_SECRET;
 
 /**
  * Generate consistent HMAC-SHA256 hash
  */
 export function hmacSha256(value: string): string {
-  const secret = getHmacSecret();
   return crypto.createHmac('sha256', secret).update(value).digest('hex');
 }
 

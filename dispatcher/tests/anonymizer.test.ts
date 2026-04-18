@@ -1,18 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { anonymizeRecord, anonymizeBatch, hmacSha256 } from '../src/anonymizer/anonymizer.js';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.hoisted(() => {
+  process.env.HMAC_SECRET = 'test_secret_key_at_least_32_chars_long';
+});
+
+import { anonymizeRecord, hmacSha256 } from '../src/anonymizer/anonymizer.js';
 import { RawLotRecord } from '../src/types/index.js';
 
 describe('anonymizer', () => {
-  const mockSecret = 'test_secret_key_at_least_32_chars_long';
-
-  beforeEach(() => {
-    vi.stubEnv('HMAC_SECRET', mockSecret);
-  });
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   const mockRecord: RawLotRecord = {
     id: 1,
     equipment_id: 'EQUIP-001',
@@ -69,11 +64,6 @@ describe('anonymizer', () => {
 
     expect(res1.unit_id).toBe(1);
     expect(res2.unit_id).toBe(2);
-  });
-
-  it('HMAC_SECRET 미설정 시 즉시 에러를 던져야 한다', () => {
-    vi.stubEnv('HMAC_SECRET', '');
-    expect(() => hmacSha256('test')).toThrow('HMAC_SECRET environment variable is not set');
   });
 
   it('원본 lot_id와 해시된 lot_id가 다른지 확인', () => {

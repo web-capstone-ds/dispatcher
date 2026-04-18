@@ -14,7 +14,6 @@ export interface RawLotRecord {
   unit_id: string;
   inspection_result?: string;
   created_at: string;
-  [key: string]: unknown;
 }
 
 /**
