@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import { pool } from './pool.js';
 import { RawLotRecord } from '../types/index.js';
 import { hmacSha256 } from '../anonymizer/anonymizer.js';
@@ -7,6 +8,7 @@ const PAGE_SIZE = Number(process.env.BATCH_PAGE_SIZE ?? 500);
 
 /**
  * Fetch LOT_END records with cursor pagination
+ * Optimization: Moves connect/release outside the loop
  */
 export async function* fetchLotRecordsCursor(
   lotId: string
@@ -14,9 +16,9 @@ export async function* fetchLotRecordsCursor(
   const lotHash = hmacSha256(lotId);
   let lastId = 0;
 
-  while (true) {
-    const client = await pool.connect();
-    try {
+  const client = await pool.connect();
+  try {
+    while (true) {
       const { rows } = await client.query<RawLotRecord>(
         'SELECT * FROM inspection_results WHERE lot_id = $1 AND id > $2 ORDER BY id ASC LIMIT $3',
         [lotId, lastId, PAGE_SIZE]
@@ -28,13 +30,13 @@ export async function* fetchLotRecordsCursor(
 
       if (rows.length < PAGE_SIZE) break;
       lastId = rows[rows.length - 1].id;
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      logger.error({ lotHash, message }, 'Error fetching lot records');
-      throw err;
-    } finally {
-      client.release();
     }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error({ lotHash, message }, 'Error fetching lot records');
+    throw err;
+  } finally {
+    client.release();
   }
 }
 
@@ -60,15 +62,44 @@ export async function fetchLotSummary(lotId: string): Promise<RawLotRecord | nul
 }
 
 /**
- * Fetch list of pending (unsent) LOTs from dispatch_log
+ * Fetch list of pending (unsent) LOTs
+ * Uses local file sent_lots.jsonl to filter dispatched LOTs
  */
 export async function fetchPendingLots(): Promise<{ lotId: string; equipmentId: string }[]> {
+  const sentLotsPath = process.env.SENT_LOTS_PATH ?? './sent_lots.jsonl';
+  const sentLotHashes = new Set<string>();
+
+  // 1. Load already sent lot hashes from file
+  try {
+    const content = await fs.readFile(sentLotsPath, 'utf-8');
+    for (const line of content.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const { lotHash } = JSON.parse(line);
+        if (lotHash) sentLotHashes.add(lotHash);
+      } catch {
+        // Skip malformed lines
+      }
+    }
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') {
+      logger.error({ message: err.message }, 'Error reading sent_lots.jsonl');
+    }
+  }
+
+  // 2. Fetch all lots from DB and filter
   const client = await pool.connect();
   try {
     const { rows } = await client.query<{ lot_id: string; equipment_id: string }>(
-      'SELECT lot_id, equipment_id FROM dispatch_log WHERE is_dispatched = FALSE'
+      'SELECT lot_id, equipment_id FROM lot_end ORDER BY created_at ASC'
     );
-    return rows.map(r => ({ lotId: r.lot_id, equipmentId: r.equipment_id }));
+    
+    return rows
+      .filter(r => !sentLotHashes.has(hmacSha256(r.lot_id)))
+      .map(r => ({
+        lotId: r.lot_id,
+        equipmentId: r.equipment_id
+      }));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error({ message }, 'Error fetching pending lots');
@@ -79,23 +110,24 @@ export async function fetchPendingLots(): Promise<{ lotId: string; equipmentId: 
 }
 
 /**
- * Mark LOT as dispatched in dispatch_log
- * NOTE: This will fail if DB_USER is historian_read and pool enforces read-only
+ * Mark LOT as dispatched using local file append
+ * (Replaces DB UPDATE to maintain read-only DB compatibility)
  */
 export async function markLotDispatched(lotId: string): Promise<void> {
-  const client = await pool.connect();
+  const sentLotsPath = process.env.SENT_LOTS_PATH ?? './sent_lots.jsonl';
+  const lotHash = hmacSha256(lotId);
+  
+  const entry = JSON.stringify({
+    lotHash,
+    dispatchedAt: new Date().toISOString()
+  }) + '\n';
+
   try {
-    await client.query(
-      'UPDATE dispatch_log SET is_dispatched = TRUE, dispatched_at = NOW() WHERE lot_id = $1',
-      [lotId]
-    );
-    logger.info({ lotHash: hmacSha256(lotId) }, 'Marked lot as dispatched');
+    await fs.appendFile(sentLotsPath, entry, 'utf-8');
+    logger.info({ lotHash }, 'Marked lot as dispatched (file-based)');
   } catch (err: unknown) {
-    const lotHash = hmacSha256(lotId);
     const message = err instanceof Error ? err.message : String(err);
-    logger.error({ lotHash, message }, 'Error marking lot as dispatched');
+    logger.error({ lotHash, message }, 'Error marking lot as dispatched to file');
     throw err;
-  } finally {
-    client.release();
   }
 }
