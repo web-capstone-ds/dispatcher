@@ -81,8 +81,8 @@ export async function fetchPendingLots(): Promise<{ lotId: string; equipmentId: 
         // Skip malformed lines
       }
     }
-  } catch (err: any) {
-    if (err.code !== 'ENOENT') {
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code !== 'ENOENT') {
       logger.error({ message: err.message }, 'Error reading sent_lots.jsonl');
     }
   }
