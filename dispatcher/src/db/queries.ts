@@ -14,14 +14,15 @@ export async function* fetchLotRecordsCursor(
   lotId: string
 ): AsyncGenerator<RawLotRecord[], void, unknown> {
   const lotHash = hmacSha256(lotId);
+  let lastTime = '';
   let lastMessageId = '';
 
   const client = await pool.connect();
   try {
     while (true) {
       const { rows } = await client.query<RawLotRecord>(
-        'SELECT * FROM inspection_results WHERE lot_id = $1 AND message_id > $2 ORDER BY message_id ASC LIMIT $3',
-        [lotId, lastMessageId, PAGE_SIZE]
+        'SELECT * FROM inspection_results WHERE lot_id = $1 AND (time > $2 OR (time = $2 AND message_id > $3)) ORDER BY time ASC, message_id ASC LIMIT $4',
+        [lotId, lastTime, lastMessageId, PAGE_SIZE]
       );
 
       if (rows.length === 0) break;
@@ -29,7 +30,9 @@ export async function* fetchLotRecordsCursor(
       yield rows;
 
       if (rows.length < PAGE_SIZE) break;
-      lastMessageId = rows[rows.length - 1].message_id;
+      const lastRow = rows[rows.length - 1];
+      lastTime = lastRow.time;
+      lastMessageId = lastRow.message_id;
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
