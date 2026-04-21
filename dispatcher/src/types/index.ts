@@ -3,17 +3,48 @@
  */
 
 /**
- * RawLotRecord: DB에서 읽어온 원본 LOT 레코드 (비식별화 전)
+ * RawLotRecord: DB(inspection_results)에서 읽어온 원본 레코드 (비식별화 전)
  */
 export interface RawLotRecord {
-  id: number;
+  time: string;
+  message_id: string;
   equipment_id: string;
-  operator_id?: string;
   lot_id: string;
-  strip_id: string;
   unit_id: string;
-  inspection_result?: string;
-  created_at: string;
+  strip_id: string;
+  recipe_id: string;
+  recipe_version: string;
+  operator_id?: string;
+  overall_result: string;
+  fail_reason_code: string;
+  fail_count: number;
+  total_inspected_count: number;
+  inspection_duration_ms: number;
+  takt_time_ms: number;
+  algorithm_version: string;
+  inspection_detail: unknown;
+  geometric: unknown;
+  bga: unknown;
+  surface: unknown;
+  singulation: unknown;
+}
+
+/**
+ * RawLotSummary: DB(lot_ends)에서 읽어온 원본 LOT 요약 레코드
+ */
+export interface RawLotSummary {
+  time: string;
+  message_id: string;
+  equipment_id: string;
+  lot_id: string;
+  lot_status: string;
+  recipe_id: string;
+  operator_id?: string;
+  total_units: number;
+  pass_count: number;
+  fail_count: number;
+  yield_pct: number;
+  lot_duration_sec: number;
 }
 
 /**
@@ -30,13 +61,13 @@ export interface AnonymizedLotRecord {
  * AnonymizedInspectionRecord: 비식별화 완료된 INSPECTION_RESULT 단건
  */
 export interface AnonymizedInspectionRecord {
-  id: number;
+  message_id: string;
   lotHash: string;
   equipmentHash: string;
   strip_id: number; // Replaced with sequence
   unit_id: number;  // Replaced with sequence
-  inspection_result?: string;
-  created_at: string;
+  overall_result: string;
+  time: string;
   [key: string]: unknown;
 }
 

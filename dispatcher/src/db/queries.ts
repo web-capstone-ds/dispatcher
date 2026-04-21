@@ -1,27 +1,27 @@
 import fs from 'node:fs/promises';
 import { pool } from './pool.js';
-import { RawLotRecord } from '../types/index.js';
+import { RawLotRecord, RawLotSummary } from '../types/index.js';
 import { hmacSha256 } from '../anonymizer/anonymizer.js';
 import { logger } from '../utils/logger.js';
 
 const PAGE_SIZE = Number(process.env.BATCH_PAGE_SIZE ?? 500);
 
 /**
- * Fetch LOT_END records with cursor pagination
- * Optimization: Moves connect/release outside the loop
+ * Fetch LOT_END (inspection_results) records with cursor pagination
+ * cursor 기준: message_id (TEXT)
  */
 export async function* fetchLotRecordsCursor(
   lotId: string
 ): AsyncGenerator<RawLotRecord[], void, unknown> {
   const lotHash = hmacSha256(lotId);
-  let lastId = 0;
+  let lastMessageId = '';
 
   const client = await pool.connect();
   try {
     while (true) {
       const { rows } = await client.query<RawLotRecord>(
-        'SELECT * FROM inspection_results WHERE lot_id = $1 AND id > $2 ORDER BY id ASC LIMIT $3',
-        [lotId, lastId, PAGE_SIZE]
+        'SELECT * FROM inspection_results WHERE lot_id = $1 AND message_id > $2 ORDER BY message_id ASC LIMIT $3',
+        [lotId, lastMessageId, PAGE_SIZE]
       );
 
       if (rows.length === 0) break;
@@ -29,7 +29,7 @@ export async function* fetchLotRecordsCursor(
       yield rows;
 
       if (rows.length < PAGE_SIZE) break;
-      lastId = rows[rows.length - 1].id;
+      lastMessageId = rows[rows.length - 1].message_id;
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -41,13 +41,13 @@ export async function* fetchLotRecordsCursor(
 }
 
 /**
- * Fetch LOT summary (lot_end table)
+ * Fetch LOT summary (lot_ends table)
  */
-export async function fetchLotSummary(lotId: string): Promise<RawLotRecord | null> {
+export async function fetchLotSummary(lotId: string): Promise<RawLotSummary | null> {
   const client = await pool.connect();
   try {
-    const { rows } = await client.query<RawLotRecord>(
-      'SELECT * FROM lot_end WHERE lot_id = $1 LIMIT 1',
+    const { rows } = await client.query<RawLotSummary>(
+      'SELECT * FROM lot_ends WHERE lot_id = $1 LIMIT 1',
       [lotId]
     );
     return rows[0] || null;
@@ -62,8 +62,7 @@ export async function fetchLotSummary(lotId: string): Promise<RawLotRecord | nul
 }
 
 /**
- * Fetch list of pending (unsent) LOTs
- * Uses local file sent_lots.jsonl to filter dispatched LOTs
+ * Fetch list of pending (unsent) LOTs from lot_ends
  */
 export async function fetchPendingLots(): Promise<{ lotId: string; equipmentId: string }[]> {
   const sentLotsPath = process.env.SENT_LOTS_PATH ?? './sent_lots.jsonl';
@@ -91,7 +90,7 @@ export async function fetchPendingLots(): Promise<{ lotId: string; equipmentId: 
   const client = await pool.connect();
   try {
     const { rows } = await client.query<{ lot_id: string; equipment_id: string }>(
-      'SELECT lot_id, equipment_id FROM lot_end ORDER BY created_at ASC'
+      'SELECT lot_id, equipment_id FROM lot_ends ORDER BY time ASC'
     );
     
     return rows
@@ -111,7 +110,6 @@ export async function fetchPendingLots(): Promise<{ lotId: string; equipmentId: 
 
 /**
  * Mark LOT as dispatched using local file append
- * (Replaces DB UPDATE to maintain read-only DB compatibility)
  */
 export async function markLotDispatched(lotId: string): Promise<void> {
   const sentLotsPath = process.env.SENT_LOTS_PATH ?? './sent_lots.jsonl';

@@ -43,7 +43,8 @@ export async function processUnsentLots(): Promise<void> {
       }
 
       // 4. Anonymize batch (HMAC hashes, remove operator_id, sequence mapping)
-      const batch = anonymizeBatch(lot.lotId, lot.equipmentId, allRecords);
+      // Now including the summary object for the batch payload
+      const batch = anonymizeBatch(lot.lotId, lot.equipmentId, allRecords, summary);
 
       // 5. Push batch to AI server with retry logic
       const result = await pushBatch(batch);
@@ -59,7 +60,6 @@ export async function processUnsentLots(): Promise<void> {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error({ lotHash, message }, 'Pipeline error processing LOT');
-      // Continue to next LOT even if this one fails
     }
   }
 }

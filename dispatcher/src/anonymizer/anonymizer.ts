@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
 import { 
   RawLotRecord, 
+  RawLotSummary,
   AnonymizedLotRecord, 
   AnonymizedInspectionRecord, 
   DispatchBatch 
 } from '../types/index.js';
-import { ANONYMIZE_RULES } from './config.js';
 
 const HMAC_SECRET = process.env.HMAC_SECRET;
 if (!HMAC_SECRET) {
@@ -36,12 +36,12 @@ export function anonymizeRecord(
   if (raw.lot_id) anonymized.lotHash = hmacSha256(raw.lot_id);
   if (raw.equipment_id) anonymized.equipmentHash = hmacSha256(raw.equipment_id);
 
-  // 2. Remove fields
+  // 2. Remove fields (security requirement)
   delete anonymized.operator_id;
   delete anonymized.lot_id;
   delete anonymized.equipment_id;
 
-  // 3. Replace sequence IDs
+  // 3. Replace sequence IDs with numeric sequences
   if (raw.strip_id) {
     if (!sequenceMaps.strip.has(raw.strip_id)) {
       sequenceMaps.strip.set(raw.strip_id, sequenceMaps.strip.size + 1);
@@ -65,7 +65,8 @@ export function anonymizeRecord(
 export function anonymizeBatch(
   lotId: string,
   equipmentId: string,
-  records: RawLotRecord[]
+  records: RawLotRecord[],
+  summary: RawLotSummary
 ): DispatchBatch {
   const lotHash = hmacSha256(lotId);
   const equipmentHash = hmacSha256(equipmentId);
@@ -77,11 +78,15 @@ export function anonymizeBatch(
 
   const anonymizedRecords = records.map(rec => anonymizeRecord(rec, sequenceMaps));
 
-  const lotSummary: AnonymizedLotRecord = {
-    lotHash,
-    equipmentHash,
-    // Add other summary fields if needed, ensuring no operator_id
-  };
+  // Anonymize LOT summary
+  const anonymizedSummary = { ...summary } as Record<string, unknown>;
+  anonymizedSummary.lotHash = lotHash;
+  anonymizedSummary.equipmentHash = equipmentHash;
+  delete anonymizedSummary.operator_id;
+  delete anonymizedSummary.lot_id;
+  delete anonymizedSummary.equipment_id;
+
+  const lotSummary: AnonymizedLotRecord = anonymizedSummary as AnonymizedLotRecord;
 
   return {
     batchId: crypto.randomUUID(),

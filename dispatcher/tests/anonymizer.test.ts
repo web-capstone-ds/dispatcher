@@ -9,14 +9,27 @@ import { RawLotRecord } from '../src/types/index.js';
 
 describe('anonymizer', () => {
   const mockRecord: RawLotRecord = {
-    id: 1,
+    time: new Date().toISOString(),
+    message_id: 'MSG-001',
     equipment_id: 'EQUIP-001',
-    operator_id: 'OP-123',
     lot_id: 'LOT-999',
-    strip_id: 'STRIP-A',
     unit_id: 'UNIT-01',
-    inspection_result: 'PASS',
-    created_at: new Date().toISOString(),
+    strip_id: 'STRIP-A',
+    recipe_id: 'RECIPE-01',
+    recipe_version: '1.0',
+    operator_id: 'OP-123',
+    overall_result: 'PASS',
+    fail_reason_code: '0',
+    fail_count: 0,
+    total_inspected_count: 1,
+    inspection_duration_ms: 120,
+    takt_time_ms: 150,
+    algorithm_version: '1.2.3',
+    inspection_detail: {},
+    geometric: {},
+    bga: {},
+    surface: {},
+    singulation: {},
   };
 
   it('operator_id 필드가 결과 객체에 존재하지 않아야 한다', () => {
