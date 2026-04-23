@@ -1,0 +1,32 @@
+# ================================
+# Dispatcher .gitignore (Node.js / TypeScript)
+# ================================
+
+# 의존성
+node_modules/
+
+# 빌드 산출물
+dist/
+
+# 실제 환경변수 파일 (.env.example은 커밋, .env는 제외)
+.env
+.env.local
+.env.production
+
+# 런타임 생성 파일 — 발송 추적 / 실패 기록
+sent_lots.jsonl
+dead_letter.jsonl
+
+# 로그
+logs/
+*.log
+
+# TypeScript 캐시
+*.tsbuildinfo
+
+# 테스트 커버리지
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
