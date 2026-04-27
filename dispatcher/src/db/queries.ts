@@ -14,7 +14,7 @@ export async function* fetchLotRecordsCursor(
   lotId: string
 ): AsyncGenerator<RawLotRecord[], void, unknown> {
   const lotHash = hmacSha256(lotId);
-  let lastTime = '';
+  let lastTime = '1970-01-01T00:00:00Z';
   let lastMessageId = '';
 
   const client = await pool.connect();
