@@ -48,6 +48,47 @@ export interface RawLotSummary {
 }
 
 /**
+ * RawOracleAnalysis: DB(oracle_analysis)에서 읽어온 Oracle 2차 검증 결과
+ */
+export interface RawOracleAnalysis {
+  time: string;
+  message_id: string;
+  equipment_id: string;
+  lot_id: string;
+  analysis_result: string;
+  confidence: number;
+  reviewer_comment?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * RawStatusHistory: DB(status_history)에서 읽어온 장비 상태 변경 이력
+ */
+export interface RawStatusHistory {
+  time: string;
+  message_id: string;
+  equipment_id: string;
+  operator_id?: string;
+  status: string;
+  prev_status?: string;
+  reason_code?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * RawAlarmHistory: DB(alarm_history)에서 읽어온 알람/에러 이력
+ */
+export interface RawAlarmHistory {
+  time: string;
+  message_id: string;
+  equipment_id: string;
+  alarm_code: string;
+  alarm_level: string;
+  hw_error_detail?: string;
+  [key: string]: unknown;
+}
+
+/**
  * AnonymizedLotRecord: 비식별화 완료된 전송용 페이로드 (operator_id 필드 없음)
  */
 export interface AnonymizedLotRecord {
@@ -72,6 +113,37 @@ export interface AnonymizedInspectionRecord {
 }
 
 /**
+ * AnonymizedOracleAnalysis: 비식별화 완료된 Oracle 분석 결과
+ */
+export interface AnonymizedOracleAnalysis {
+  message_id: string;
+  lotHash: string;
+  equipmentHash: string;
+  time: string;
+  [key: string]: unknown;
+}
+
+/**
+ * AnonymizedStatusHistory: 비식별화 완료된 장비 상태 이력
+ */
+export interface AnonymizedStatusHistory {
+  message_id: string;
+  equipmentHash: string;
+  time: string;
+  [key: string]: unknown;
+}
+
+/**
+ * AnonymizedAlarmHistory: 비식별화 완료된 알람 이력
+ */
+export interface AnonymizedAlarmHistory {
+  message_id: string;
+  equipmentHash: string;
+  time: string;
+  [key: string]: unknown;
+}
+
+/**
  * AI 서버로 전송하는 배치 단위
  */
 export interface DispatchBatch {
@@ -82,6 +154,9 @@ export interface DispatchBatch {
   totalRecords: number;
   records: AnonymizedInspectionRecord[];
   lotSummary: AnonymizedLotRecord;
+  oracleAnalysis: AnonymizedOracleAnalysis[];
+  statusHistory: AnonymizedStatusHistory[];
+  alarmHistory: AnonymizedAlarmHistory[];
 }
 
 /**

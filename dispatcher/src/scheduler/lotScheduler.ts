@@ -1,9 +1,12 @@
 import cron from 'node-cron';
-import { 
-  fetchPendingLots, 
-  fetchLotRecordsCursor, 
-  fetchLotSummary, 
-  markLotDispatched 
+import {
+  fetchPendingLots,
+  fetchLotRecordsCursor,
+  fetchLotSummary,
+  fetchOracleAnalysis,
+  fetchStatusHistory,
+  fetchAlarmHistory,
+  markLotDispatched,
 } from '../db/queries.js';
 import { anonymizeBatch, hmacSha256 } from '../anonymizer/anonymizer.js';
 import { pushBatch } from '../push/aiClient.js';
@@ -42,14 +45,30 @@ export async function processUnsentLots(): Promise<void> {
         continue;
       }
 
-      // 4. Anonymize batch (HMAC hashes, remove operator_id, sequence mapping)
-      // Now including the summary object for the batch payload
-      const batch = anonymizeBatch(lot.lotId, lot.equipmentId, allRecords, summary);
+      // 4. Fetch additional context (oracle 2차 검증, 상태/알람 이력)
+      const lotStartTime = allRecords.length > 0 ? allRecords[0].time : summary.time;
+      const lotEndTime = summary.time;
+      const [oracleAnalysis, statusHistory, alarmHistory] = await Promise.all([
+        fetchOracleAnalysis(lot.lotId),
+        fetchStatusHistory(lot.equipmentId, lotStartTime, lotEndTime),
+        fetchAlarmHistory(lot.equipmentId, lotStartTime, lotEndTime),
+      ]);
 
-      // 5. Push batch to AI server with retry logic
+      // 5. Anonymize batch (HMAC hashes, remove operator_id, sequence mapping)
+      const batch = anonymizeBatch(
+        lot.lotId,
+        lot.equipmentId,
+        allRecords,
+        summary,
+        oracleAnalysis,
+        statusHistory,
+        alarmHistory
+      );
+
+      // 6. Push batch to AI server with retry logic
       const result = await pushBatch(batch);
 
-      // 6. Record result (mark as dispatched locally or write to dead letter)
+      // 7. Record result (mark as dispatched locally or write to dead letter)
       if (result.success) {
         await markLotDispatched(lot.lotId);
         logger.info({ batchId: batch.batchId, lotHash, equipmentHash }, 'Batch dispatched successfully');

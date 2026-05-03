@@ -1,6 +1,12 @@
 import fs from 'node:fs/promises';
 import { pool } from './pool.js';
-import { RawLotRecord, RawLotSummary } from '../types/index.js';
+import {
+  RawLotRecord,
+  RawLotSummary,
+  RawOracleAnalysis,
+  RawStatusHistory,
+  RawAlarmHistory,
+} from '../types/index.js';
 import { hmacSha256 } from '../anonymizer/anonymizer.js';
 import { logger } from '../utils/logger.js';
 
@@ -58,6 +64,79 @@ export async function fetchLotSummary(lotId: string): Promise<RawLotSummary | nu
     const lotHash = hmacSha256(lotId);
     const message = err instanceof Error ? err.message : String(err);
     logger.error({ lotHash, message }, 'Error fetching lot summary');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Fetch Oracle 2차 검증 분석 결과 (oracle_analysis table)
+ */
+export async function fetchOracleAnalysis(lotId: string): Promise<RawOracleAnalysis[]> {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query<RawOracleAnalysis>(
+      'SELECT * FROM oracle_analysis WHERE lot_id = $1 ORDER BY time ASC',
+      [lotId]
+    );
+    return rows;
+  } catch (err: unknown) {
+    const lotHash = hmacSha256(lotId);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error({ lotHash, message }, 'Error fetching oracle analysis');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Fetch 장비 상태 변경 이력 (status_history table)
+ * LOT 처리 기간 동안의 상태 변화를 조회한다.
+ */
+export async function fetchStatusHistory(
+  equipmentId: string,
+  startTime: string,
+  endTime: string
+): Promise<RawStatusHistory[]> {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query<RawStatusHistory>(
+      'SELECT * FROM status_history WHERE equipment_id = $1 AND time BETWEEN $2 AND $3 ORDER BY time ASC',
+      [equipmentId, startTime, endTime]
+    );
+    return rows;
+  } catch (err: unknown) {
+    const equipmentHash = hmacSha256(equipmentId);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error({ equipmentHash, message }, 'Error fetching status history');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Fetch 알람/에러 이력 (alarm_history table)
+ * LOT 처리 기간 동안 발생한 알람을 조회한다.
+ */
+export async function fetchAlarmHistory(
+  equipmentId: string,
+  startTime: string,
+  endTime: string
+): Promise<RawAlarmHistory[]> {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query<RawAlarmHistory>(
+      'SELECT * FROM alarm_history WHERE equipment_id = $1 AND time BETWEEN $2 AND $3 ORDER BY time ASC',
+      [equipmentId, startTime, endTime]
+    );
+    return rows;
+  } catch (err: unknown) {
+    const equipmentHash = hmacSha256(equipmentId);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error({ equipmentHash, message }, 'Error fetching alarm history');
     throw err;
   } finally {
     client.release();
