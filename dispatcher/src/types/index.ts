@@ -62,29 +62,30 @@ export interface RawOracleAnalysis {
 }
 
 /**
- * RawStatusHistory: DB(status_history)에서 읽어온 장비 상태 변경 이력
+ * RawStatusHistory: DB(status_updates)에서 읽어온 장비 상태 변경 이력
  */
 export interface RawStatusHistory {
   time: string;
   message_id: string;
   equipment_id: string;
   operator_id?: string;
-  status: string;
-  prev_status?: string;
-  reason_code?: string;
+  equipment_status: string;
   [key: string]: unknown;
 }
 
 /**
- * RawAlarmHistory: DB(alarm_history)에서 읽어온 알람/에러 이력
+ * RawAlarmHistory: DB(hw_alarms)에서 읽어온 알람/에러 이력
  */
 export interface RawAlarmHistory {
   time: string;
   message_id: string;
   equipment_id: string;
-  alarm_code: string;
+  hw_error_code: string;
   alarm_level: string;
   hw_error_detail?: string;
+  auto_recovery_attempted?: boolean;
+  burst_id?: string;
+  burst_count?: number;
   [key: string]: unknown;
 }
 

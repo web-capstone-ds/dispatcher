@@ -84,9 +84,10 @@ export function anonymizeOracleAnalysis(raw: RawOracleAnalysis): AnonymizedOracl
 }
 
 /**
- * Anonymize 장비 상태 변경 이력
+ * Anonymize 장비 상태 변경 이력 (status_updates)
  * - equipment_id → HMAC 해시
  * - operator_id → 제거
+ * - equipment_status: 그대로 통과 (식별자 아님)
  */
 export function anonymizeStatusHistory(raw: RawStatusHistory): AnonymizedStatusHistory {
   const anonymized = { ...raw } as Record<string, unknown>;
@@ -100,9 +101,11 @@ export function anonymizeStatusHistory(raw: RawStatusHistory): AnonymizedStatusH
 }
 
 /**
- * Anonymize 알람/에러 이력
+ * Anonymize 알람/에러 이력 (hw_alarms)
  * - equipment_id → HMAC 해시
- * - operator_id → 제거
+ * - operator_id → 제거 (스키마에 없더라도 방어적으로 차단)
+ * - hw_error_code, alarm_level, auto_recovery_attempted, burst_count: 그대로 통과
+ * - burst_id: 알람 버스트 그룹 식별자. 장비/작업자 식별자 아니므로 그대로 통과
  *
  * TODO(보안 검토 필요): hw_error_detail 필드는 자유 텍스트 형태로 작업자 메시지나
  * 시리얼 번호 등 PII가 포함될 가능성이 있다. 운영팀과 샘플 데이터 분석 후

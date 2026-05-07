@@ -77,7 +77,7 @@ export async function fetchOracleAnalysis(lotId: string): Promise<RawOracleAnaly
   const client = await pool.connect();
   try {
     const { rows } = await client.query<RawOracleAnalysis>(
-      'SELECT * FROM oracle_analysis WHERE lot_id = $1 ORDER BY time ASC',
+      'SELECT * FROM oracle_analyses WHERE lot_id = $1 ORDER BY time ASC',
       [lotId]
     );
     return rows;
@@ -103,7 +103,7 @@ export async function fetchStatusHistory(
   const client = await pool.connect();
   try {
     const { rows } = await client.query<RawStatusHistory>(
-      'SELECT * FROM status_history WHERE equipment_id = $1 AND time BETWEEN $2 AND $3 ORDER BY time ASC',
+      'SELECT * FROM status_updates WHERE equipment_id = $1 AND time BETWEEN $2 AND $3 ORDER BY time ASC',
       [equipmentId, startTime, endTime]
     );
     return rows;
@@ -129,7 +129,7 @@ export async function fetchAlarmHistory(
   const client = await pool.connect();
   try {
     const { rows } = await client.query<RawAlarmHistory>(
-      'SELECT * FROM alarm_history WHERE equipment_id = $1 AND time BETWEEN $2 AND $3 ORDER BY time ASC',
+      'SELECT * FROM hw_alarms WHERE equipment_id = $1 AND time BETWEEN $2 AND $3 ORDER BY time ASC',
       [equipmentId, startTime, endTime]
     );
     return rows;
