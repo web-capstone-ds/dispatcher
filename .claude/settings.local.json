@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm run *)",
       "Bash(npm test *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Read(//c/Hansung_Project/capstone/**)",
+      "Read(//c/Hansung_Project/**)",
+      "Bash(npx vitest *)"
     ]
   }
 }
