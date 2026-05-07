@@ -48,16 +48,16 @@ export interface RawLotSummary {
 }
 
 /**
- * RawOracleAnalysis: DB(oracle_analysis)에서 읽어온 Oracle 2차 검증 결과
+ * RawOracleAnalysis: DB(oracle_analyses)에서 읽어온 Oracle 2차 검증 결과
  */
 export interface RawOracleAnalysis {
   time: string;
   message_id: string;
   equipment_id: string;
   lot_id: string;
-  analysis_result: string;
-  confidence: number;
-  reviewer_comment?: string;
+  judgment: string;
+  yield_pct: number;
+  ai_comment?: string;
   [key: string]: unknown;
 }
 

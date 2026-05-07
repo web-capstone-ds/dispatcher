@@ -71,7 +71,7 @@ export async function fetchLotSummary(lotId: string): Promise<RawLotSummary | nu
 }
 
 /**
- * Fetch Oracle 2차 검증 분석 결과 (oracle_analysis table)
+ * Fetch Oracle 2차 검증 분석 결과 (oracle_analyses table)
  */
 export async function fetchOracleAnalysis(lotId: string): Promise<RawOracleAnalysis[]> {
   const client = await pool.connect();
