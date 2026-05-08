@@ -106,6 +106,7 @@ export interface AnonymizedInspectionRecord {
   message_id: string;
   lotHash: string;
   equipmentHash: string;
+  equipmentId?: string; // EQUIPMENT_ID_MODE=plaintext일 때만 포함
   strip_id: number; // Replaced with sequence
   unit_id: number;  // Replaced with sequence
   overall_result: string;
@@ -120,6 +121,7 @@ export interface AnonymizedOracleAnalysis {
   message_id: string;
   lotHash: string;
   equipmentHash: string;
+  equipmentId?: string;
   time: string;
   [key: string]: unknown;
 }
@@ -130,6 +132,7 @@ export interface AnonymizedOracleAnalysis {
 export interface AnonymizedStatusHistory {
   message_id: string;
   equipmentHash: string;
+  equipmentId?: string;
   time: string;
   [key: string]: unknown;
 }
@@ -140,6 +143,7 @@ export interface AnonymizedStatusHistory {
 export interface AnonymizedAlarmHistory {
   message_id: string;
   equipmentHash: string;
+  equipmentId?: string;
   time: string;
   [key: string]: unknown;
 }
@@ -152,6 +156,7 @@ export interface DispatchBatch {
   dispatchedAt: string;     // ISO 8601 UTC
   lotHash: string;          // lot_id HMAC 해시
   equipmentHash: string;    // equipment_id HMAC 해시
+  equipmentId?: string;     // EQUIPMENT_ID_MODE=plaintext일 때만 포함
   totalRecords: number;
   records: AnonymizedInspectionRecord[];
   lotSummary: AnonymizedLotRecord;

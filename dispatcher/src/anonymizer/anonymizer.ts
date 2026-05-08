@@ -21,6 +21,17 @@ if (!HMAC_SECRET) {
 // Explicit narrowing for TypeScript
 const secret: string = HMAC_SECRET;
 
+// equipment_id 비식별화 모드. plaintext면 원본+해시 병행, hmac이면 해시만.
+type EquipmentIdMode = 'plaintext' | 'hmac';
+const RAW_MODE = (process.env.EQUIPMENT_ID_MODE ?? 'hmac').toLowerCase();
+if (RAW_MODE !== 'plaintext' && RAW_MODE !== 'hmac') {
+  throw new Error(
+    `Invalid EQUIPMENT_ID_MODE: "${process.env.EQUIPMENT_ID_MODE}". Must be 'plaintext' or 'hmac'`
+  );
+}
+const EQUIPMENT_ID_MODE: EquipmentIdMode = RAW_MODE;
+const isPlaintext = EQUIPMENT_ID_MODE === 'plaintext';
+
 /**
  * Generate consistent HMAC-SHA256 hash
  */
@@ -40,7 +51,10 @@ export function anonymizeRecord(
 
   // 1. HMAC hash fields
   if (raw.lot_id) anonymized.lotHash = hmacSha256(raw.lot_id);
-  if (raw.equipment_id) anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+  if (raw.equipment_id) {
+    anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+    if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
+  }
 
   // 2. Remove fields (security requirement)
   delete anonymized.operator_id;
@@ -74,7 +88,10 @@ export function anonymizeOracleAnalysis(raw: RawOracleAnalysis): AnonymizedOracl
   const anonymized = { ...raw } as Record<string, unknown>;
 
   if (raw.lot_id) anonymized.lotHash = hmacSha256(raw.lot_id);
-  if (raw.equipment_id) anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+  if (raw.equipment_id) {
+    anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+    if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
+  }
 
   delete anonymized.operator_id;
   delete anonymized.lot_id;
@@ -92,7 +109,10 @@ export function anonymizeOracleAnalysis(raw: RawOracleAnalysis): AnonymizedOracl
 export function anonymizeStatusHistory(raw: RawStatusHistory): AnonymizedStatusHistory {
   const anonymized = { ...raw } as Record<string, unknown>;
 
-  if (raw.equipment_id) anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+  if (raw.equipment_id) {
+    anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+    if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
+  }
 
   delete anonymized.operator_id;
   delete anonymized.equipment_id;
@@ -114,7 +134,10 @@ export function anonymizeStatusHistory(raw: RawStatusHistory): AnonymizedStatusH
 export function anonymizeAlarmHistory(raw: RawAlarmHistory): AnonymizedAlarmHistory {
   const anonymized = { ...raw } as Record<string, unknown>;
 
-  if (raw.equipment_id) anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+  if (raw.equipment_id) {
+    anonymized.equipmentHash = hmacSha256(raw.equipment_id);
+    if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
+  }
 
   delete anonymized.operator_id;
   delete anonymized.equipment_id;
@@ -148,13 +171,14 @@ export function anonymizeBatch(
   const anonymizedSummary = { ...summary } as Record<string, unknown>;
   anonymizedSummary.lotHash = lotHash;
   anonymizedSummary.equipmentHash = equipmentHash;
+  if (isPlaintext) anonymizedSummary.equipmentId = equipmentId;
   delete anonymizedSummary.operator_id;
   delete anonymizedSummary.lot_id;
   delete anonymizedSummary.equipment_id;
 
   const lotSummary: AnonymizedLotRecord = anonymizedSummary as AnonymizedLotRecord;
 
-  return {
+  const batch: DispatchBatch = {
     batchId: crypto.randomUUID(),
     dispatchedAt: new Date().toISOString(),
     lotHash,
@@ -166,4 +190,8 @@ export function anonymizeBatch(
     statusHistory: statusHistory.map(anonymizeStatusHistory),
     alarmHistory: alarmHistory.map(anonymizeAlarmHistory),
   };
+
+  if (isPlaintext) batch.equipmentId = equipmentId;
+
+  return batch;
 }
