@@ -6,7 +6,7 @@
  * RawLotRecord: DB(inspection_results)에서 읽어온 원본 레코드 (비식별화 전)
  */
 export interface RawLotRecord {
-  time: string;
+  time: Date;
   message_id: string;
   equipment_id: string;
   lot_id: string;
@@ -33,7 +33,7 @@ export interface RawLotRecord {
  * RawLotSummary: DB(lot_ends)에서 읽어온 원본 LOT 요약 레코드
  */
 export interface RawLotSummary {
-  time: string;
+  time: Date;
   message_id: string;
   equipment_id: string;
   lot_id: string;

@@ -32,6 +32,9 @@ export function anonymizeRecord(
   // Create shallow copy to avoid mutating original
   const anonymized = { ...raw } as Record<string, unknown>;
 
+  // Convert pg Date object to ISO string for outgoing payload
+  anonymized.time = raw.time instanceof Date ? raw.time.toISOString() : String(raw.time);
+
   // 1. HMAC hash fields
   if (raw.lot_id) anonymized.lotHash = hmacSha256(raw.lot_id);
   if (raw.equipment_id) anonymized.equipmentHash = hmacSha256(raw.equipment_id);
