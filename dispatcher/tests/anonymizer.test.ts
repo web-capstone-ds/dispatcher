@@ -119,7 +119,7 @@ describe('anonymizeOracleAnalysis', () => {
     equipment_id: 'EQUIP-001',
     lot_id: 'LOT-999',
     judgment: 'PASS',
-    yield_pct: 99.5,
+    yield_actual: 99.5,
     ai_comment: 'No anomaly',
   };
 
@@ -137,10 +137,10 @@ describe('anonymizeOracleAnalysis', () => {
     expect('operator_id' in result).toBe(false);
   });
 
-  it('judgment / yield_pct / ai_comment 등 분석 결과 필드는 보존되어야 한다', () => {
+  it('judgment / yield_actual / ai_comment 등 분석 결과 필드는 보존되어야 한다', () => {
     const result = anonymizeOracleAnalysis(rawOracle);
     expect(result.judgment).toBe('PASS');
-    expect(result.yield_pct).toBe(99.5);
+    expect(result.yield_actual).toBe(99.5);
     expect(result.ai_comment).toBe('No anomaly');
   });
 });
@@ -255,7 +255,7 @@ describe('anonymizeBatch', () => {
           equipment_id: 'EQUIP-001',
           lot_id: 'LOT-999',
           judgment: 'PASS',
-          yield_pct: 99.0,
+          yield_actual: 99.0,
         },
       ],
       [

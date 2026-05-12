@@ -56,7 +56,7 @@ export interface RawOracleAnalysis {
   equipment_id: string;
   lot_id: string;
   judgment: string;
-  yield_pct: number;
+  yield_actual: number;
   ai_comment?: string;
   [key: string]: unknown;
 }
@@ -72,6 +72,7 @@ export interface RawStatusHistory {
   equipment_status: string;
   [key: string]: unknown;
 }
+
 
 /**
  * RawAlarmHistory: DB(hw_alarms)에서 읽어온 알람/에러 이력
