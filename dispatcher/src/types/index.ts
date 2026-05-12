@@ -48,6 +48,48 @@ export interface RawLotSummary {
 }
 
 /**
+ * RawOracleAnalysis: DB(oracle_analyses)에서 읽어온 Oracle 2차 검증 결과
+ */
+export interface RawOracleAnalysis {
+  time: Date;
+  message_id: string;
+  equipment_id: string;
+  lot_id: string;
+  judgment: string;
+  yield_pct: number;
+  ai_comment?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * RawStatusHistory: DB(status_updates)에서 읽어온 장비 상태 변경 이력
+ */
+export interface RawStatusHistory {
+  time: Date;
+  message_id: string;
+  equipment_id: string;
+  operator_id?: string;
+  equipment_status: string;
+  [key: string]: unknown;
+}
+
+/**
+ * RawAlarmHistory: DB(hw_alarms)에서 읽어온 알람/에러 이력
+ */
+export interface RawAlarmHistory {
+  time: Date;
+  message_id: string;
+  equipment_id: string;
+  hw_error_code: string;
+  alarm_level: string;
+  hw_error_detail?: string;
+  auto_recovery_attempted?: boolean;
+  burst_id?: string;
+  burst_count?: number;
+  [key: string]: unknown;
+}
+
+/**
  * AnonymizedLotRecord: 비식별화 완료된 전송용 페이로드 (operator_id 필드 없음)
  */
 export interface AnonymizedLotRecord {
@@ -64,9 +106,44 @@ export interface AnonymizedInspectionRecord {
   message_id: string;
   lotHash: string;
   equipmentHash: string;
+  equipmentId?: string; // EQUIPMENT_ID_MODE=plaintext일 때만 포함
   strip_id: number; // Replaced with sequence
   unit_id: number;  // Replaced with sequence
   overall_result: string;
+  time: string;
+  [key: string]: unknown;
+}
+
+/**
+ * AnonymizedOracleAnalysis: 비식별화 완료된 Oracle 분석 결과
+ */
+export interface AnonymizedOracleAnalysis {
+  message_id: string;
+  lotHash: string;
+  equipmentHash: string;
+  equipmentId?: string;
+  time: string;
+  [key: string]: unknown;
+}
+
+/**
+ * AnonymizedStatusHistory: 비식별화 완료된 장비 상태 이력
+ */
+export interface AnonymizedStatusHistory {
+  message_id: string;
+  equipmentHash: string;
+  equipmentId?: string;
+  time: string;
+  [key: string]: unknown;
+}
+
+/**
+ * AnonymizedAlarmHistory: 비식별화 완료된 알람 이력
+ */
+export interface AnonymizedAlarmHistory {
+  message_id: string;
+  equipmentHash: string;
+  equipmentId?: string;
   time: string;
   [key: string]: unknown;
 }
@@ -79,9 +156,13 @@ export interface DispatchBatch {
   dispatchedAt: string;     // ISO 8601 UTC
   lotHash: string;          // lot_id HMAC 해시
   equipmentHash: string;    // equipment_id HMAC 해시
+  equipmentId?: string;     // EQUIPMENT_ID_MODE=plaintext일 때만 포함
   totalRecords: number;
   records: AnonymizedInspectionRecord[];
   lotSummary: AnonymizedLotRecord;
+  oracleAnalysis: AnonymizedOracleAnalysis[];
+  statusHistory: AnonymizedStatusHistory[];
+  alarmHistory: AnonymizedAlarmHistory[];
 }
 
 /**
