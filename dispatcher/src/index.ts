@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { validateConnection, pool } from './db/pool.js';
 import { startScheduler } from './scheduler/lotScheduler.js';
+import { startAuthSyncScheduler } from './auth_sync/account_sync_worker.js';
 import { logger } from './utils/logger.js';
 
 /**
@@ -35,6 +36,9 @@ async function main(): Promise<void> {
 
     // 3. Start batch scheduler
     startScheduler();
+
+    // 4. Start Auth Sync Scheduler
+    startAuthSyncScheduler();
 
     logger.info('Dispatcher server initialized and running');
 
