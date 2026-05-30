@@ -4,6 +4,10 @@ import { startScheduler } from './scheduler/lotScheduler.js';
 import { startAuthSyncScheduler } from './auth_sync/account_sync_worker.js';
 import { logger } from './utils/logger.js';
 
+function isAuthSyncEnabled(): boolean {
+  return (process.env.AUTH_SYNC_ENABLED ?? 'false').toLowerCase() === 'true';
+}
+
 /**
  * Validate required environment variables
  */
@@ -37,8 +41,12 @@ async function main(): Promise<void> {
     // 3. Start batch scheduler
     startScheduler();
 
-    // 4. Start Auth Sync Scheduler
-    startAuthSyncScheduler();
+    // 4. Start Auth Sync Scheduler only when explicitly enabled.
+    if (isAuthSyncEnabled()) {
+      startAuthSyncScheduler();
+    } else {
+      logger.info('Auth Sync disabled. Set AUTH_SYNC_ENABLED=true to enable it.');
+    }
 
     logger.info('Dispatcher server initialized and running');
 

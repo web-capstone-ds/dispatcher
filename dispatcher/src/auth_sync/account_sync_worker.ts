@@ -71,6 +71,13 @@ export class AccountSyncWorker {
 }
 
 export function startAuthSyncScheduler() {
-  const worker = new AccountSyncWorker();
-  worker.startScheduler();
+  try {
+    const worker = new AccountSyncWorker();
+    worker.startScheduler();
+  } catch (err: any) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      'Auth Sync disabled after initialization failure'
+    );
+  }
 }
