@@ -40,6 +40,23 @@ export function hmacSha256(value: string): string {
 }
 
 /**
+ * 자유 텍스트의 PII 패턴을 마스킹한다.
+ */
+export function maskPii(text: string): string {
+  return text
+    .replace(/\d{2,3}-\d{3,4}-\d{4}/g, '[PHONE]')
+    .replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL]')
+    .replace(/[A-Z]{2,4}-[A-Z0-9]{3,}/g, '[ID]');
+}
+
+function anonymizeRecipeId(anonymized: Record<string, unknown>, recipeId?: string): void {
+  if (recipeId) {
+    anonymized.recipeHash = hmacSha256(recipeId);
+  }
+  delete anonymized.recipe_id;
+}
+
+/**
  * Anonymize single record
  */
 export function anonymizeRecord(
@@ -58,6 +75,7 @@ export function anonymizeRecord(
     anonymized.equipmentHash = hmacSha256(raw.equipment_id);
     if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
   }
+  anonymizeRecipeId(anonymized, typeof raw.recipe_id === 'string' ? raw.recipe_id : undefined);
 
   // 2. Remove fields (security requirement)
   delete anonymized.operator_id;
@@ -97,6 +115,7 @@ export function anonymizeOracleAnalysis(raw: RawOracleAnalysis): AnonymizedOracl
     anonymized.equipmentHash = hmacSha256(raw.equipment_id);
     if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
   }
+  anonymizeRecipeId(anonymized, typeof raw.recipe_id === 'string' ? raw.recipe_id : undefined);
 
   delete anonymized.operator_id;
   delete anonymized.lot_id;
@@ -120,6 +139,7 @@ export function anonymizeStatusHistory(raw: RawStatusHistory): AnonymizedStatusH
     anonymized.equipmentHash = hmacSha256(raw.equipment_id);
     if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
   }
+  anonymizeRecipeId(anonymized, typeof raw.recipe_id === 'string' ? raw.recipe_id : undefined);
 
   delete anonymized.operator_id;
   delete anonymized.equipment_id;
@@ -134,9 +154,7 @@ export function anonymizeStatusHistory(raw: RawStatusHistory): AnonymizedStatusH
  * - hw_error_code, alarm_level, auto_recovery_attempted, burst_count: 그대로 통과
  * - burst_id: 알람 버스트 그룹 식별자. 장비/작업자 식별자 아니므로 그대로 통과
  *
- * TODO(보안 검토 필요): hw_error_detail 필드는 자유 텍스트 형태로 작업자 메시지나
- * 시리얼 번호 등 PII가 포함될 가능성이 있다. 운영팀과 샘플 데이터 분석 후
- * 정규식 필터링 또는 마스킹 정책을 추가 적용해야 한다.
+ * - hw_error_detail: 자유 텍스트 PII 패턴 마스킹
  */
 export function anonymizeAlarmHistory(raw: RawAlarmHistory): AnonymizedAlarmHistory {
   const anonymized = { ...raw } as Record<string, unknown>;
@@ -146,6 +164,10 @@ export function anonymizeAlarmHistory(raw: RawAlarmHistory): AnonymizedAlarmHist
   if (raw.equipment_id) {
     anonymized.equipmentHash = hmacSha256(raw.equipment_id);
     if (isPlaintext) anonymized.equipmentId = raw.equipment_id;
+  }
+
+  if (typeof anonymized.hw_error_detail === 'string') {
+    anonymized.hw_error_detail = maskPii(anonymized.hw_error_detail);
   }
 
   delete anonymized.operator_id;
@@ -181,6 +203,7 @@ export function anonymizeBatch(
   anonymizedSummary.lotHash = lotHash;
   anonymizedSummary.equipmentHash = equipmentHash;
   if (isPlaintext) anonymizedSummary.equipmentId = equipmentId;
+  anonymizeRecipeId(anonymizedSummary, summary.recipe_id);
   delete anonymizedSummary.operator_id;
   delete anonymizedSummary.lot_id;
   delete anonymizedSummary.equipment_id;

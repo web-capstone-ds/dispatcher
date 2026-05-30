@@ -96,6 +96,7 @@ export interface RawAlarmHistory {
 export interface AnonymizedLotRecord {
   lotHash: string;
   equipmentHash: string;
+  recipeHash: string;
   // operator_id is removed
   [key: string]: unknown;
 }
