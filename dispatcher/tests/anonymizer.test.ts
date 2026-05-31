@@ -11,6 +11,7 @@ import {
   anonymizeAlarmHistory,
   anonymizeBatch,
   hmacSha256,
+  maskPii,
 } from '../src/anonymizer/anonymizer.js';
 import {
   RawLotRecord,
@@ -110,6 +111,22 @@ describe('anonymizer', () => {
     const hash = hmacSha256(mockRecord.lot_id);
     expect(hash).not.toBe(mockRecord.lot_id);
   });
+
+  it('recipe_id는 recipeHash로 치환되고 원본 키가 제거되어야 한다', () => {
+    const sequenceMaps = { strip: new Map(), unit: new Map() };
+    const result = anonymizeRecord(mockRecord, sequenceMaps);
+    expect(result.recipeHash).toBe(hmacSha256('RECIPE-01'));
+    expect('recipe_id' in result).toBe(false);
+  });
+
+  it('자유 텍스트 PII 패턴을 마스킹해야 한다', () => {
+    expect(maskPii('작업자 김철수(010-1234-5678) 조치 완료')).toBe(
+      '작업자 김철수([PHONE]) 조치 완료'
+    );
+    expect(maskPii('ENG-KIM 확인 완료')).toBe('[ID] 확인 완료');
+    expect(maskPii('test@example.com 연락')).toBe('[EMAIL] 연락');
+    expect(maskPii('CAM_TIMEOUT_ERR 발생')).toBe('CAM_TIMEOUT_ERR 발생');
+  });
 });
 
 describe('anonymizeOracleAnalysis', () => {
@@ -199,6 +216,15 @@ describe('anonymizeAlarmHistory', () => {
     const withOperator = { ...rawAlarm, operator_id: 'OP-XYZ' } as RawAlarmHistory;
     const result = anonymizeAlarmHistory(withOperator);
     expect('operator_id' in result).toBe(false);
+  });
+
+  it('hw_error_detail의 PII를 마스킹해야 한다', () => {
+    const withPii = {
+      ...rawAlarm,
+      hw_error_detail: '작업자 김철수(010-1234-5678) test@example.com ENG-KIM',
+    };
+    const result = anonymizeAlarmHistory(withPii);
+    expect(result.hw_error_detail).toBe('작업자 김철수([PHONE]) [EMAIL] [ID]');
   });
 });
 
@@ -292,7 +318,9 @@ describe('anonymizeBatch', () => {
     expect('operator_id' in batch.lotSummary).toBe(false);
     expect('lot_id' in batch.lotSummary).toBe(false);
     expect('equipment_id' in batch.lotSummary).toBe(false);
+    expect('recipe_id' in batch.lotSummary).toBe(false);
     expect(batch.lotSummary.lotHash).toBe(hmacSha256('LOT-999'));
     expect(batch.lotSummary.equipmentHash).toBe(hmacSha256('EQUIP-001'));
+    expect(batch.lotSummary.recipeHash).toBe(hmacSha256('RECIPE-01'));
   });
 });
